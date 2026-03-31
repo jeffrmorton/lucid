@@ -1,0 +1,25 @@
+name: SR Entrainment
+description: >
+  Dynamic neurofeedback entrainment to the live Schumann Resonance fundamental.
+  Target frequency updates in real-time from EarthSync station data.
+  Enhances alpha/theta coherence at the Earth's natural resonant frequency.
+electrode: Cz
+reference: A1
+session_duration_s: 1200
+baseline_duration_s: 120
+earthsync:
+  enabled: true
+  url: "http://localhost:3001"
+  station_id: "simulator1"
+  update_interval_s: 10
+bands:
+  sr_target:
+    name: SR
+    range: [6.83, 8.83]
+    target: enhance
+    threshold_percentile: 50
+  inhibit_high_beta:
+    name: High Beta
+    range: [25, 35]
+    target: suppress
+    threshold_percentile: 80

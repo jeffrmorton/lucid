@@ -1,0 +1,90 @@
+# AI agent instructions
+CLAUDE.md
+.cursorrules
+.cursorignore
+.github/copilot-instructions.md
+.windsurfrules
+.clinerules
+.roomodes
+.aider*
+.continue/
+.bolt/
+.codeium/
+.tabnine/
+.sourcery.yaml
+.cody/
+.augment/
+.roo/
+.idx/
+
+# uv
+uv.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.eggs/
+dist/
+build/
+.venv/
+venv/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Node / JavaScript / TypeScript
+node_modules/
+dist/
+.turbo/
+*.tsbuildinfo
+.vite/
+
+# Rust
+target/
+
+# ESP-IDF / Firmware
+firmware/build/
+firmware/sdkconfig.old
+firmware/managed_components/
+
+# KiCad
+hardware/**/*-backups/
+hardware/**/*.kicad_prl
+hardware/**/*_autosave*
+*.bak
+*~
+
+# ML Models (large binary files)
+*.onnx
+*.pt
+*.pth
+!models/.gitkeep
+
+# WASM build output
+dsp/wasm/pkg/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage reports
+coverage/
+lcov.info

@@ -1,0 +1,12 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "lucid-dsp"
+version = "0.1.2"
+requires-python = ">=3.12"
+dependencies = ["numpy>=2.1"]
+
+[tool.maturin]
+features = ["pyo3/extension-module"]

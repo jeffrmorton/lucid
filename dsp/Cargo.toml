@@ -1,0 +1,23 @@
+[package]
+name = "lucid-dsp"
+version = "0.1.2"
+edition = "2024"
+description = "High-performance DSP for EEG signal processing"
+license = "MIT"
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+rustfft = "6.2"
+ndarray = "0.16"
+num-complex = "0.4"
+thiserror = "2"
+
+[dev-dependencies]
+approx = "0.5"
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[profile.release]
+opt-level = 3
+lto = true

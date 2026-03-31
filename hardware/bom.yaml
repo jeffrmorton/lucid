@@ -1,0 +1,131 @@
+name: Lucid BCI Board — Bill of Materials
+revision: "0.1"
+
+components:
+  - ref: U1
+    part: ADS1299-6
+    package: TQFP-64
+    description: 8-channel 24-bit analog front-end for biopotential measurements
+    manufacturer: Texas Instruments
+    qty: 1
+    unit_cost: 25
+    notes: Core EEG ADC — 24-bit, 250 SPS per channel, integrated PGA
+
+  - ref: U2
+    part: ESP32-S3-WROOM-1
+    package: Module
+    description: WiFi + BLE 5.0 SoC module with dual-core Xtensa LX7
+    manufacturer: Espressif
+    qty: 1
+    unit_cost: 8
+    notes: Main MCU — handles SPI from ADS1299, BLE/WiFi streaming
+
+  - ref: U3
+    part: ADuM4160
+    package: SOIC-16
+    description: Full/low speed USB digital isolator
+    manufacturer: Analog Devices
+    qty: 1
+    unit_cost: 4
+    notes: Galvanic isolation for USB connection — patient safety
+
+  - ref: U3B
+    part: Isolated DC-DC converter
+    package: SIP-4
+    description: Isolated 3.3V-to-3.3V DC-DC converter for USB isolation power
+    manufacturer: Various
+    qty: 1
+    unit_cost: 4
+    notes: Pairs with ADuM4160 for full 5 kV peak galvanic isolation
+
+  - ref: U4, U5, U6, U7, U8
+    part: OPA2376
+    package: SOT-23-8
+    description: Dual low-noise precision op-amp (7.5 nV/rtHz)
+    manufacturer: Texas Instruments
+    qty: 5
+    unit_cost: 2
+    notes: Active electrode preamps — 10 channels total (8 EEG + 2 reference, 2 per IC)
+
+  - ref: U9
+    part: MAX86150
+    package: OLGA-14
+    description: Integrated PPG and ECG biosensor
+    manufacturer: Analog Devices (Maxim)
+    qty: 1
+    unit_cost: 5
+    notes: Heart rate + cardiac artifact reference via photoplethysmography
+
+  - ref: U10
+    part: LSM6DSOX
+    package: LGA-14
+    description: 6-axis IMU (accelerometer + gyroscope) with ML core
+    manufacturer: STMicroelectronics
+    qty: 1
+    unit_cost: 3
+    notes: Head motion reference for artifact rejection
+
+  - ref: U11
+    part: TPS7A30
+    package: SOT-23-5
+    description: Low-noise negative LDO regulator
+    manufacturer: Texas Instruments
+    qty: 1
+    unit_cost: 2
+    notes: Negative analog supply for ADS1299 (AVDD1N)
+
+  - ref: U12
+    part: TPS7A49
+    package: SOT-23-5
+    description: Low-noise positive LDO regulator
+    manufacturer: Texas Instruments
+    qty: 1
+    unit_cost: 2
+    notes: Positive analog supply for ADS1299 (AVDD1)
+
+  - ref: U13
+    part: TPS63001
+    package: QFN-10
+    description: Buck-boost converter, 3.3V output
+    manufacturer: Texas Instruments
+    qty: 1
+    unit_cost: 3
+    notes: Digital supply from single Li-ion cell
+
+  - ref: U14
+    part: TP4056
+    package: SOP-8
+    description: USB-C Li-ion battery charging controller
+    manufacturer: Various
+    qty: 1
+    unit_cost: 2
+    notes: USB-C charging circuit for Li-Po cell
+
+  - ref: J1
+    part: USB-C Receptacle
+    package: SMD
+    description: USB Type-C connector
+    manufacturer: Various
+    qty: 1
+    unit_cost: 1
+    notes: Charging and isolated data connection
+
+  - ref: BT1
+    part: Li-Po Cell
+    package: Pouch
+    description: 3.7V 2000mAh lithium polymer battery
+    manufacturer: Various
+    qty: 1
+    unit_cost: 8
+    notes: Runtime target ~28 hr WiFi / ~57 hr BLE continuous acquisition
+
+  - ref: Y1
+    part: 2.048 MHz Crystal
+    package: HC-49S
+    description: Crystal oscillator for ADS1299 clock
+    manufacturer: Various
+    qty: 1
+    unit_cost: 1
+    notes: ADS1299 CLK input — fCLK = 2.048 MHz
+
+# Total BOM cost: ~$120 (excluding PCB, electrodes, and passives)

@@ -1,0 +1,12 @@
+{
+  "include": ["server", "sdk/python"],
+  "exclude": ["**/__pycache__", "**/.venv", "**/node_modules"],
+  "pythonVersion": "3.13",
+  "typeCheckingMode": "standard",
+  "reportMissingImports": true,
+  "reportMissingTypeStubs": false,
+  "reportUnknownMemberType": false,
+  "reportUnknownArgumentType": false,
+  "reportUnknownVariableType": false,
+  "reportUnknownParameterType": false
+}

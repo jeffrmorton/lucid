@@ -1,0 +1,37 @@
+name: Beta Training
+description: >
+  Beta (15-20 Hz) enhancement at Cz for sustained attention.
+evidence_level: preliminary
+applications: [attention, focus]
+
+electrode_montage:
+  active: Cz
+  reference: linked_mastoids
+  ground: Fpz
+
+bands:
+  reward:
+    name: Low Beta
+    range: [15, 20]
+    target: enhance
+    threshold_percentile: 60
+  inhibit_low:
+    name: Theta
+    range: [4, 8]
+    target: suppress
+    threshold_percentile: 80
+  inhibit_high:
+    name: High Beta
+    range: [25, 35]
+    target: suppress
+    threshold_percentile: 80
+
+session:
+  baseline_duration_s: 120
+  training_duration_s: 1200
+  total_sessions: 20
+
+feedback:
+  type: audio_visual
+  reward_sound: true
+  visual_bar: true

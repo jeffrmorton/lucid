@@ -1,0 +1,18 @@
+[project]
+name = "lucid-sdk"
+version = "0.1.2"
+description = "Python SDK for Lucid BCI devices"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+dependencies = [
+    "numpy>=2.1",
+    "scipy>=1.14",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0",
+    "pytest-cov>=6.0",
+    "ruff>=0.15",
+    "pyright>=1.1",
+]

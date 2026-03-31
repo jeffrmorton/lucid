@@ -1,0 +1,13 @@
+[package]
+name = "lucid-dsp-python"
+version = "0.1.2"
+edition = "2024"
+
+[lib]
+name = "lucid_dsp"
+crate-type = ["cdylib"]
+
+[dependencies]
+lucid-dsp = { path = ".." }
+pyo3 = { version = "0.28", features = ["extension-module"] }
+numpy = "0.28"

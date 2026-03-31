@@ -1,0 +1,38 @@
+name: SMR Training
+description: >
+  Sensorimotor rhythm (12-15 Hz) enhancement at Cz for focus and sleep quality.
+  Based on Sterman (1977) protocol with modern threshold adaptation.
+evidence_level: moderate
+applications: [focus, sleep, epilepsy]
+
+electrode_montage:
+  active: Cz
+  reference: linked_mastoids
+  ground: Fpz
+
+bands:
+  reward:
+    name: SMR
+    range: [12, 15]
+    target: enhance
+    threshold_percentile: 60
+  inhibit_low:
+    name: Theta
+    range: [4, 8]
+    target: suppress
+    threshold_percentile: 80
+  inhibit_high:
+    name: High Beta
+    range: [25, 35]
+    target: suppress
+    threshold_percentile: 80
+
+session:
+  baseline_duration_s: 120
+  training_duration_s: 1200
+  total_sessions: 20
+
+feedback:
+  type: audio_visual
+  reward_sound: true
+  visual_bar: true

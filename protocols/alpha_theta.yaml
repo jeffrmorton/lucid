@@ -1,0 +1,38 @@
+name: Alpha/Theta Training
+description: >
+  Alpha (8-13 Hz) and theta (4-8 Hz) enhancement for relaxation and anxiety reduction.
+  Protocol based on Peniston & Kulkosky (1989) with modern adaptations.
+evidence_level: moderate
+applications: [relaxation, anxiety, meditation]
+
+electrode_montage:
+  active: Pz
+  reference: linked_mastoids
+  ground: Fpz
+
+bands:
+  reward_alpha:
+    name: Alpha
+    range: [8, 13]
+    target: enhance
+    threshold_percentile: 50
+  reward_theta:
+    name: Theta
+    range: [4, 8]
+    target: enhance
+    threshold_percentile: 50
+  inhibit:
+    name: High Beta
+    range: [20, 30]
+    target: suppress
+    threshold_percentile: 80
+
+session:
+  baseline_duration_s: 120
+  training_duration_s: 1800
+  total_sessions: 15
+
+feedback:
+  type: audio
+  reward_sound: true
+  eyes_closed: true

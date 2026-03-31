@@ -1,0 +1,39 @@
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "${LUCID_PORT:-3002}:3001"
+    environment:
+      - LUCID_HOST=0.0.0.0
+      - LUCID_PORT=3001
+      - LUCID_LOG_LEVEL=info
+    volumes:
+      - ./protocols:/app/protocols:ro
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    ports:
+      - "${LUCID_WEB_PORT:-4000}:80"
+    depends_on:
+      - server
+    restart: unless-stopped
+
+  simulator:
+    build: ./simulator
+    profiles: [dev]
+    environment:
+      - SERVER_URL=ws://server:3001/ws/eeg
+      - SAMPLE_RATE=250
+      - N_CHANNELS=8
+      - ALPHA_HZ=10.0
+      - ALPHA_AMP=15.0
+      - EPOCH_INTERVAL=1.0
+      - LOG_LEVEL=info
+    depends_on:
+      - server
+    restart: unless-stopped
