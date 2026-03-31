@@ -8,7 +8,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY web/ web/
 
 # Install only web workspace deps
-RUN pnpm install --filter lucid-web
+RUN pnpm install --filter lucid-web --ignore-scripts
 
 # Build from web directory
 WORKDIR /app/web
