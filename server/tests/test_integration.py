@@ -357,27 +357,38 @@ class TestRESTAPIIntegration:
 
         # Verify deleted
         resp = await client.get(f"/api/sessions/{session_id}")
-        assert "error" in resp.json()
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "Session not found"
 
     async def test_data_endpoints(self, client: AsyncClient) -> None:
         """All data endpoints return valid responses."""
-        for path in ["/api/data/", "/api/data/bands", "/api/data/protocols"]:
+        for path in ["/api/data/", "/api/data/bands"]:
             resp = await client.get(path)
             assert resp.status_code == 200
 
 
-# --- Integration: Live EarthSync tests (require EarthSync on localhost:3001) ---
-
-EARTHSYNC_URL = os.environ.get("EARTHSYNC_TEST_URL", "http://localhost:3001")
+# --- Integration: Live EarthSync tests (require a running EarthSync server) ---
+# EarthSync listens on :8000 for a bare uvicorn run (its config default), or
+# host :3001 mapped to container :3000 under its own compose. Point the test at
+# its real address — NOT Lucid's own :3001, which would let Lucid masquerade as
+# EarthSync (both return {"status": "ok"} from /health).
+EARTHSYNC_URL = os.environ.get("EARTHSYNC_TEST_URL", "http://localhost:8000")
 
 
 @pytest.fixture
 def earthsync_available():
-    """Skip if EarthSync is not running."""
+    """Skip unless a *real* EarthSync server is reachable.
+
+    A plain /health 200 is insufficient (Lucid returns the same shape), so we
+    require the EarthSync-only public stations endpoint to respond as a list.
+    """
     try:
         resp = httpx_sync.get(f"{EARTHSYNC_URL}/health", timeout=3.0)
         if resp.status_code != 200:
             pytest.skip("EarthSync not available")
+        stations = httpx_sync.get(f"{EARTHSYNC_URL}/api/public/stations", timeout=3.0)
+        if stations.status_code != 200 or not isinstance(stations.json(), list):
+            pytest.skip("EarthSync-only endpoint missing — not a real EarthSync server")
     except Exception:
         pytest.skip("EarthSync not available")
 

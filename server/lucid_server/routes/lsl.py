@@ -2,12 +2,17 @@
 
 from fastapi import APIRouter
 
+from lucid_server.config import get_settings
 from lucid_server.services.lsl_inlet import LSLInlet
 
 router = APIRouter()
 
-# Shared LSL inlet instance
-_inlet = LSLInlet()
+# Shared LSL inlet instance, configured from settings.
+_settings = get_settings()
+_inlet = LSLInlet(
+    stream_type=_settings.lsl_stream_type,
+    buffer_seconds=_settings.lsl_buffer_seconds,
+)
 
 
 @router.get("/available")

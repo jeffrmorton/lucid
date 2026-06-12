@@ -1,6 +1,6 @@
 [project]
 name = "lucid-server"
-version = "0.1.2"
+version = "0.2.1"
 description = "Lucid BCI server — real-time EEG processing and neurofeedback"
 requires-python = ">=3.13"
 license = { text = "MIT" }
@@ -8,20 +8,21 @@ dependencies = [
     "fastapi>=0.135",
     "uvicorn[standard]>=0.42",
     "websockets>=14.0",
-    "numpy>=2.1",
-    "scipy>=1.14",
+    "numpy>=2.4",
+    "scipy>=1.17",
     "pydantic>=2.10",
-    "pydantic-settings>=2.7",
+    "pydantic-settings>=2.13",
     "onnxruntime>=1.20",
     "sqlmodel>=0.0.22",
     "httpx>=0.28",
+    "structlog>=25.5",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=9.0",
-    "pytest-asyncio>=0.24",
-    "pytest-cov>=6.0",
+    "pytest-asyncio>=1.3",
+    "pytest-cov>=7.1",
     "httpx>=0.28",
     "ruff>=0.15",
     "pyright>=1.1",
@@ -35,3 +36,10 @@ testpaths = ["tests"]
 markers = [
     "integration: tests requiring external services (e.g., EarthSync)",
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["lucid_server"]

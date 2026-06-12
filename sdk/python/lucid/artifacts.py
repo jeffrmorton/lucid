@@ -42,7 +42,7 @@ def detect_motion(
 def reject_epochs(
     data: NDArray[np.float64],
     threshold_uv: float = 150.0,
-) -> NDArray[np.bool_]:
+) -> NDArray[np.bool_] | np.bool_:
     """Mark epochs containing artifacts (peak-to-peak > threshold).
 
     Args:
@@ -50,7 +50,8 @@ def reject_epochs(
         threshold_uv: Peak-to-peak amplitude threshold.
 
     Returns:
-        Boolean mask where True = clean epoch.
+        For 2D input, a single bool (True = clean). For 3D input, a boolean
+        mask per epoch (True = clean epoch).
     """
     if data.ndim == 2:
         ptp = np.ptp(data, axis=-1)

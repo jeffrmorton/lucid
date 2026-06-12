@@ -5,16 +5,18 @@ Currently a placeholder -- no pre-trained model is included.
 """
 
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
 
+ort: Any
 try:
-    import onnxruntime as ort
+    import onnxruntime as ort  # type: ignore[no-redef]
 
     _ORT_AVAILABLE = True
 except ImportError:  # pragma: no cover
-    ort = None  # type: ignore[assignment]
+    ort = None
     _ORT_AVAILABLE = False
 
 

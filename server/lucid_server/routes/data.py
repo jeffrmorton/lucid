@@ -23,15 +23,3 @@ async def get_band_definitions() -> dict:
             "gamma": {"low": 30.0, "high": 100.0, "description": "Higher cognitive, perception"},
         }
     }
-
-
-@router.get("/protocols")
-async def get_protocols() -> dict:
-    """List available neurofeedback protocols."""
-    return {
-        "protocols": [
-            {"name": "SMR Training", "file": "smr_training.yaml", "evidence": "moderate"},
-            {"name": "Alpha/Theta", "file": "alpha_theta.yaml", "evidence": "moderate"},
-            {"name": "Beta Training", "file": "beta_training.yaml", "evidence": "preliminary"},
-        ]
-    }

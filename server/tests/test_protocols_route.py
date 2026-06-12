@@ -36,8 +36,15 @@ async def test_get_protocol(client: AsyncClient) -> None:
 
 async def test_get_nonexistent_protocol(client: AsyncClient) -> None:
     response = await client.get("/api/protocols/nonexistent")
-    assert response.status_code == 200
-    assert "error" in response.json()
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"]
+
+
+async def test_get_protocol_rejects_invalid_name(client: AsyncClient) -> None:
+    """A protocol name failing the allowlist (e.g. uppercase/dots) is rejected with 404."""
+    response = await client.get("/api/protocols/Bad.Name")
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"]
 
 
 async def test_list_protocols_handles_parse_error(client: AsyncClient) -> None:

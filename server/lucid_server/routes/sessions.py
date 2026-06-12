@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -52,17 +52,17 @@ async def create_session(body: SessionCreate | None = None) -> SessionResponse:
 
 
 @router.get("/{session_id}")
-async def get_session(session_id: str) -> SessionResponse | dict:
+async def get_session(session_id: str) -> SessionResponse:
     """Get a specific session."""
-    if session_id in _sessions:
-        return SessionResponse(**_sessions[session_id])
-    return {"error": "Session not found"}
+    if session_id not in _sessions:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    return SessionResponse(**_sessions[session_id])
 
 
 @router.delete("/{session_id}")
 async def delete_session(session_id: str) -> dict:
     """Delete a session."""
-    if session_id in _sessions:
-        del _sessions[session_id]
-        return {"status": "deleted"}
-    return {"error": "Session not found"}
+    if session_id not in _sessions:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    del _sessions[session_id]
+    return {"status": "deleted"}

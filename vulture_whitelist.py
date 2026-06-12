@@ -12,7 +12,6 @@ get_session  # noqa: F821
 delete_session  # noqa: F821
 get_recordings  # noqa: F821
 get_band_definitions  # noqa: F821
-get_protocols  # noqa: F821
 list_protocols  # noqa: F821
 get_protocol  # noqa: F821
 lsl_available  # noqa: F821
@@ -24,8 +23,10 @@ viewer_websocket  # noqa: F821
 eeg_websocket  # noqa: F821
 neurofeedback_websocket  # noqa: F821
 
-# FastAPI app + middleware
+# FastAPI app + factory + settings accessor
 app  # noqa: F821
+create_app  # noqa: F821
+get_settings  # noqa: F821
 
 # Pydantic model fields (accessed by framework serialization)
 SessionCreate.name  # noqa: F821
@@ -40,15 +41,13 @@ SessionResponse.status  # noqa: F821
 Settings.host  # noqa: F821
 Settings.port  # noqa: F821
 Settings.cors_origins  # noqa: F821
-Settings.database_url  # noqa: F821
-Settings.log_level  # noqa: F821
 Settings.sample_rate  # noqa: F821
 Settings.n_channels  # noqa: F821
 Settings.notch_freq  # noqa: F821
 Settings.bandpass_low  # noqa: F821
 Settings.bandpass_high  # noqa: F821
-Settings.asr_threshold  # noqa: F821
-Settings.asr_calibration_seconds  # noqa: F821
+Settings.earthsync_url  # noqa: F821
+Settings.earthsync_station_id  # noqa: F821
 Settings.brainflow_board_id  # noqa: F821
 Settings.brainflow_serial_port  # noqa: F821
 Settings.lsl_stream_type  # noqa: F821

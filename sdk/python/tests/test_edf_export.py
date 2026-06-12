@@ -191,6 +191,27 @@ def test_header_bytes_calculation(tmp_path: Path) -> None:
         assert header["header_bytes"] == 256 + n_ch * 256
 
 
+def test_read_header_returns_sample_rate(tmp_path: Path) -> None:
+    """read_edf_header surfaces sample_rate (samples_per_record / record_duration)."""
+    data = np.random.randn(4, 500)
+    filepath = tmp_path / "rate.edf"
+    write_edf(filepath, data, sample_rate=256)
+
+    header = read_edf_header(filepath)
+    assert header["samples_per_record"] == 256
+    assert header["sample_rate"] == 256.0
+
+
+def test_read_header_sample_rate_various(tmp_path: Path) -> None:
+    """sample_rate is correct across several rates."""
+    for rate in [128, 250, 512]:
+        data = np.random.randn(2, rate * 2)
+        filepath = tmp_path / f"rate_{rate}.edf"
+        write_edf(filepath, data, sample_rate=rate)
+        header = read_edf_header(filepath)
+        assert header["sample_rate"] == float(rate)
+
+
 def test_edf_config_defaults() -> None:
     """Verify EDFConfig has correct defaults."""
     config = EDFConfig()

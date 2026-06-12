@@ -9,7 +9,8 @@ session_duration_s: 1200
 baseline_duration_s: 120
 earthsync:
   enabled: true
-  url: "http://localhost:3001"
+  # No `url` here on purpose: the EarthSync address comes from LUCID_EARTHSYNC_URL
+  # (settings.earthsync_url) so operators can redirect Lucid via the documented env var.
   station_id: "simulator1"
   update_interval_s: 10
 bands:

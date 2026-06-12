@@ -1,6 +1,6 @@
 [project]
 name = "lucid"
-version = "0.1.2"
+version = "0.2.1"
 requires-python = ">=3.13"
 
 [tool.uv.workspace]
@@ -17,6 +17,13 @@ ignore = ["S101", "PLR2004", "TRY003"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "PLR2004", "ARG001", "ARG002", "SLF001", "PLC0415", "SIM117"]
 "**/tests/**" = ["S101", "S105", "S106", "PLR2004", "ARG001", "ARG002", "SLF001", "PLC0415", "SIM117"]
+# Standalone CLI dev tools: print() to stdout is the intended interface,
+# and µ/Ω-style unicode in band labels is intentional (RUF001).
+"scripts/**" = ["T201", "RUF001", "PLR0913"]
+"simulator/simulate.py" = ["T201", "RUF001", "PLC0415"]
+# Vulture whitelist: intentional bare references (B018); names resolved at
+# import time via the package, with per-line `# noqa: F821` for the linter.
+"vulture_whitelist.py" = ["B018"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

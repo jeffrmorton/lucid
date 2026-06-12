@@ -1,5 +1,5 @@
 {
-  "include": ["server", "sdk/python"],
+  "include": ["server/lucid_server", "sdk/python/lucid"],
   "exclude": ["**/__pycache__", "**/.venv", "**/node_modules"],
   "pythonVersion": "3.13",
   "typeCheckingMode": "standard",
