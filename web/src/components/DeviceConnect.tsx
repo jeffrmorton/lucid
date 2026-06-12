@@ -1,7 +1,8 @@
-/** Device connection UI. */
+/** Device connection control: status chip + connect/disconnect button. */
 
-import clsx from 'clsx';
 import type { ConnectionStatus } from '../lib/types';
+import { Button } from './ui/Button';
+import { StatusChip, type StatusVariant } from './ui/StatusChip';
 
 interface DeviceConnectProps {
   status: ConnectionStatus;
@@ -9,42 +10,33 @@ interface DeviceConnectProps {
   onDisconnect: () => void;
 }
 
+export const STATUS_META: Record<
+  ConnectionStatus,
+  { variant: StatusVariant; label: string; pulse: boolean }
+> = {
+  connected: { variant: 'success', label: 'Connected', pulse: false },
+  connecting: { variant: 'warning', label: 'Connecting', pulse: true },
+  disconnected: { variant: 'neutral', label: 'Disconnected', pulse: false },
+  error: { variant: 'danger', label: 'Error', pulse: false },
+};
+
 export function DeviceConnect({ status, onConnect, onDisconnect }: DeviceConnectProps) {
+  const meta = STATUS_META[status];
   const isConnected = status === 'connected';
   const isConnecting = status === 'connecting';
 
   return (
-    <div className="flex items-center gap-2" data-testid="device-connect">
-      <div
-        className={clsx(
-          'w-2 h-2 rounded-full',
-          isConnected && 'bg-success animate-pulse',
-          isConnecting && 'bg-warning animate-pulse',
-          !isConnected && !isConnecting && 'bg-text-muted',
-        )}
-      />
+    <div className="flex items-center gap-2.5" data-testid="device-connect">
+      <StatusChip variant={meta.variant} label={meta.label} pulse={meta.pulse} />
       {isConnected ? (
-        <button
-          type="button"
-          onClick={onDisconnect}
-          className="text-xs px-2 py-1 rounded bg-bg-hover text-text-secondary hover:text-error hover:bg-error/10 transition-colors"
-        >
+        <Button variant="danger" onClick={onDisconnect}>
           Disconnect
-        </button>
-      ) : isConnecting ? (
-        <span className="text-xs text-warning">Connecting...</span>
-      ) : (
-        <button
-          type="button"
-          onClick={onConnect}
-          className="text-xs px-2 py-1 rounded bg-accent/20 text-accent hover:bg-accent/30 transition-colors"
-        >
+        </Button>
+      ) : isConnecting ? null : (
+        <Button variant="primary" onClick={onConnect}>
           Connect
-        </button>
+        </Button>
       )}
-      <span className="text-xs text-text-muted" data-testid="status-dot">
-        {status}
-      </span>
     </div>
   );
 }

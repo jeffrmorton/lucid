@@ -2,7 +2,6 @@
 
 export const DEFAULT_SAMPLE_RATE = 250;
 export const DEFAULT_CHANNELS = 8;
-export const DISPLAY_SECONDS = 10;
 // Use relative WebSocket URL — nginx proxies /ws/* to the server
 export const SERVER_WS_URL = `ws://${window.location.host}/ws/viewer`;
 

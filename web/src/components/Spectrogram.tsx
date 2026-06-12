@@ -1,132 +1,156 @@
-/** Spectrogram display -- 2D heatmap rendered on Canvas.
+/** Spectrogram display — 2D heatmap rendered on Canvas 2D.
  *
- * Rows = time steps (newest at bottom), columns = frequency/band bins.
- * Color maps value using a viridis-inspired palette.
+ * Rows = time steps (older at top, newer at bottom), columns = frequency bins
+ * (0–55 Hz, dB scale). Uses the shared viridis colormap with a stable color
+ * domain anchored to the running peak (peak − dynamicRange) so historical rows
+ * keep a constant color instead of flickering. Includes a frequency axis and a
+ * dB colorbar legend. DPR-scaled and resize-aware via useCanvas.
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback } from 'react';
+import { useCanvas } from '../lib/canvas';
+import { viridisColor, viridisCss } from '../lib/colormap';
+import { canvasColors, themeFontMono, themeFontSans } from '../lib/theme-colors';
+import { Panel } from './ui/Panel';
 
 interface SpectrogramProps {
-  /** 2D array: rows are time steps, columns are frequency/band bins. */
+  /** 2D array: rows are time steps, columns are frequency bins. */
   data: number[][];
   /** Maximum time steps to display. */
   maxRows?: number;
-  /** Width in pixels. */
-  width?: number;
-  /** Height in pixels. */
-  height?: number;
+  /** Highest frequency represented by the columns, in Hz. */
+  maxFreqHz?: number;
+  /** dB window below the running peak used for the color domain. */
+  dynamicRange?: number;
 }
 
-/** Map a value to a color (viridis-inspired: dark purple -> blue -> teal -> green -> yellow). */
-export function valueToColor(value: number, min: number, max: number): [number, number, number] {
-  const range = max - min || 1;
-  const t = Math.max(0, Math.min(1, (value - min) / range));
-  // Viridis-inspired: dark purple -> blue -> teal -> green -> yellow
-  const r = Math.round(Math.min(255, t < 0.5 ? t * 2 * 80 : 80 + (t - 0.5) * 2 * 175));
-  const g = Math.round(Math.min(255, t < 0.3 ? t * 3.3 * 30 : 30 + (t - 0.3) * 1.43 * 225));
-  const b = Math.round(Math.min(255, t < 0.5 ? 100 + t * 2 * 100 : 200 - (t - 0.5) * 2 * 200));
-  return [r, g, b];
-}
+const COLORBAR_W = 8;
+const RIGHT_PAD = 30;
+const BOTTOM_PAD = 14;
 
-/** Draw a spectrogram heatmap on a canvas. */
+/** Draw a spectrogram heatmap, in CSS-pixel coordinates. */
 export function drawSpectrogram(
   ctx: CanvasRenderingContext2D,
   data: number[][],
   width: number,
   height: number,
+  maxFreqHz = 55,
+  dynamicRange = 60,
 ): void {
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = canvasColors.panel();
+  ctx.fillRect(0, 0, width, height);
+
   if (data.length === 0) {
-    ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = '#1a1a2e';
-    ctx.fillRect(0, 0, width, height);
-    ctx.fillStyle = '#666';
-    ctx.font = '14px sans-serif';
-    ctx.fillText('Waiting for data...', width / 2 - 60, height / 2);
+    ctx.fillStyle = canvasColors.textMuted();
+    ctx.font = themeFontSans(13);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Waiting for data…', width / 2, height / 2);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
     return;
   }
 
+  const plotW = Math.max(1, width - COLORBAR_W - RIGHT_PAD);
+  const plotH = Math.max(1, height - BOTTOM_PAD);
   const numRows = data.length;
   const numCols = data[0].length;
 
-  // Find global min/max for color scaling
-  let min = Number.POSITIVE_INFINITY;
+  // Stable color domain anchored to the running peak.
   let max = Number.NEGATIVE_INFINITY;
   for (const row of data) {
     for (const v of row) {
-      if (v < min) min = v;
       if (v > max) max = v;
     }
   }
+  const min = max - dynamicRange;
 
-  const cellW = width / numCols;
-  const cellH = height / numRows;
+  const cellW = plotW / numCols;
+  const cellH = plotH / numRows;
 
-  const imageData = ctx.createImageData(width, height);
-  const pixels = imageData.data;
-
-  for (let row = 0; row < numRows; row++) {
-    const y0 = Math.floor(row * cellH);
-    const y1 = Math.floor((row + 1) * cellH);
-    for (let col = 0; col < numCols; col++) {
-      const x0 = Math.floor(col * cellW);
-      const x1 = Math.floor((col + 1) * cellW);
-      const [r, g, b] = valueToColor(data[row][col], min, max);
-
-      for (let y = y0; y < y1 && y < height; y++) {
-        for (let x = x0; x < x1 && x < width; x++) {
-          const idx = (y * width + x) * 4;
-          pixels[idx] = r;
-          pixels[idx + 1] = g;
-          pixels[idx + 2] = b;
-          pixels[idx + 3] = 255;
-        }
-      }
+  for (let r = 0; r < numRows; r++) {
+    const y = r * cellH;
+    for (let c = 0; c < numCols; c++) {
+      const [rr, gg, bb] = viridisColor(data[r][c], min, max);
+      ctx.fillStyle = `rgb(${rr},${gg},${bb})`;
+      ctx.fillRect(c * cellW, y, Math.ceil(cellW), Math.ceil(cellH));
     }
   }
 
-  ctx.putImageData(imageData, 0, 0);
+  // Frequency axis labels (Hz).
+  ctx.fillStyle = canvasColors.textMuted();
+  ctx.font = themeFontMono(9);
+  ctx.textBaseline = 'top';
+  for (let hz = 0; hz <= maxFreqHz; hz += 10) {
+    const x = Math.min((hz / maxFreqHz) * plotW, plotW - 10);
+    ctx.fillText(`${hz}`, x, plotH + 2);
+  }
+  ctx.fillText('Hz', plotW - 2, plotH + 2);
 
-  // Draw time axis labels (data scrolls top=older, bottom=newer)
-  ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.font = '10px monospace';
-  ctx.fillText('\u2191 older', 4, 12);
-  ctx.fillText('newer', 4, height - 4);
+  // Time direction hints.
+  ctx.fillStyle = canvasColors.textSecondary();
+  ctx.fillText('↑ older', 4, 2);
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('↓ newer', 4, plotH - 2);
+  ctx.textBaseline = 'alphabetic';
+
+  // dB colorbar legend.
+  const barX = width - COLORBAR_W - 2;
+  const segments = 32;
+  for (let i = 0; i < segments; i++) {
+    const t = i / (segments - 1);
+    const segY = plotH - (t * plotH) / 1;
+    ctx.fillStyle = viridisCss(t, 0, 1);
+    ctx.fillRect(barX, segY - plotH / segments, COLORBAR_W, plotH / segments + 1);
+  }
+  ctx.fillStyle = canvasColors.textMuted();
+  ctx.font = themeFontMono(9);
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.fillText(`${Math.round(max)}`, barX - 2, 2);
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(`${Math.round(min)} dB`, barX - 2, plotH);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
 }
 
-export function Spectrogram({ data, maxRows = 60, width = 800, height = 200 }: SpectrogramProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
+export function Spectrogram({
+  data,
+  maxRows = 60,
+  maxFreqHz = 55,
+  dynamicRange = 60,
+}: SpectrogramProps) {
   const displayData = data.length > maxRows ? data.slice(-maxRows) : data;
+  const bins = displayData[0]?.length ?? 0;
 
-  const render = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    drawSpectrogram(ctx, displayData, canvas.width, canvas.height);
-  }, [displayData]);
-
-  useEffect(() => {
-    render();
-  }, [render]);
+  const draw = useCallback(
+    (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+      drawSpectrogram(ctx, displayData, width, height, maxFreqHz, dynamicRange);
+    },
+    [displayData, maxFreqHz, dynamicRange],
+  );
+  const canvasRef = useCanvas(draw);
 
   return (
-    <div className="bg-bg-panel rounded-lg p-3 h-full flex flex-col" data-testid="spectrogram">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
-          Spectrogram
-        </h3>
-        <span className="text-[10px] font-mono text-text-muted">
-          {displayData.length} time steps &times; {displayData[0]?.length ?? 0} bins
-        </span>
-      </div>
+    <Panel
+      title="Spectrogram"
+      meta={`${displayData.length} × ${bins} bins`}
+      noPadding
+      className="h-full"
+      testId="spectrogram"
+    >
       <canvas
         ref={canvasRef}
-        width={width}
-        height={height}
         data-testid="spectrogram-canvas"
-        className="w-full flex-1 rounded"
+        role="img"
+        aria-label={
+          displayData.length === 0
+            ? 'Spectrogram, waiting for data'
+            : `Spectrogram, ${displayData.length} time steps by ${bins} frequency bins, 0 to ${maxFreqHz} hertz`
+        }
+        className="block w-full h-full"
       />
-    </div>
+    </Panel>
   );
 }

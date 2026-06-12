@@ -1,10 +1,18 @@
 /** Session recording and playback manager. */
 
-interface Session {
+import { Circle, FolderOpen } from 'lucide-react';
+import { Button } from './ui/Button';
+import { EmptyState } from './ui/EmptyState';
+import { Panel } from './ui/Panel';
+import { StatusChip } from './ui/StatusChip';
+
+export interface Session {
   id: string;
   name: string;
   date: string;
   duration: number;
+  /** Recording size in bytes. */
+  size?: number;
 }
 
 interface SessionManagerProps {
@@ -14,6 +22,21 @@ interface SessionManagerProps {
   onStopRecording?: () => void;
 }
 
+/** Format a duration in seconds as m:ss. */
+export function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+/** Format a byte count as a human-readable size. */
+export function formatSize(bytes?: number): string {
+  if (bytes == null) return '—';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
 export function SessionManager({
   sessions = [],
   isRecording = false,
@@ -21,42 +44,55 @@ export function SessionManager({
   onStopRecording,
 }: SessionManagerProps) {
   return (
-    <div className="bg-bg-panel rounded-lg p-3" data-testid="session-manager">
-      <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-        Sessions
-      </h3>
-      <div className="mb-2">
-        {isRecording ? (
-          <button
-            type="button"
-            onClick={onStopRecording}
-            data-testid="stop-recording"
-            className="text-xs px-3 py-1.5 rounded bg-error/20 text-error hover:bg-error/30 transition-colors"
-          >
-            Stop Recording
-          </button>
+    <div className="mx-auto w-full flex flex-col gap-4 max-w-3xl" data-testid="session-manager">
+      <Panel title="Recording" meta={`${sessions.length} saved`}>
+        <div className="flex items-center justify-between gap-4">
+          <StatusChip
+            variant={isRecording ? 'danger' : 'neutral'}
+            label={isRecording ? 'Recording' : 'Idle'}
+            pulse={isRecording}
+          />
+          {isRecording ? (
+            <Button variant="danger" onClick={onStopRecording} data-testid="stop-recording">
+              <Circle className="w-3 h-3 fill-current" aria-hidden={true} />
+              Stop Recording
+            </Button>
+          ) : (
+            <Button variant="primary" onClick={onStartRecording} data-testid="start-recording">
+              <Circle className="w-3 h-3 fill-current" aria-hidden={true} />
+              Start Recording
+            </Button>
+          )}
+        </div>
+      </Panel>
+
+      <Panel title="Sessions" noPadding>
+        {sessions.length === 0 ? (
+          <EmptyState
+            icon={FolderOpen}
+            label="No recorded sessions"
+            hint="Start a recording to capture an EEG session."
+          />
         ) : (
-          <button
-            type="button"
-            onClick={onStartRecording}
-            data-testid="start-recording"
-            className="text-xs px-3 py-1.5 rounded bg-accent/20 text-accent hover:bg-accent/30 transition-colors"
-          >
-            Start Recording
-          </button>
+          <ul data-testid="session-list" className="divide-y divide-border">
+            {sessions.map((s) => (
+              <li
+                key={s.id}
+                className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 px-4 py-2.5 text-sm hover:bg-bg-raised/50 transition-colors"
+              >
+                <span className="text-text-primary truncate">{s.name}</span>
+                <span className="font-mono tabular-nums text-text-secondary text-xs">
+                  {formatDuration(s.duration)}
+                </span>
+                <span className="font-mono tabular-nums text-text-muted text-xs w-16 text-right">
+                  {formatSize(s.size)}
+                </span>
+                <span className="font-mono tabular-nums text-text-muted text-xs">{s.date}</span>
+              </li>
+            ))}
+          </ul>
         )}
-      </div>
-      <ul className="space-y-1" data-testid="session-list">
-        {sessions.map((s) => (
-          <li
-            key={s.id}
-            className="text-xs font-mono text-text-secondary px-2 py-1 rounded bg-bg-primary"
-          >
-            {s.name} &mdash; {s.date} ({s.duration}s)
-          </li>
-        ))}
-      </ul>
-      {sessions.length === 0 && <p className="text-xs text-text-muted">No recorded sessions</p>}
+      </Panel>
     </div>
   );
 }
