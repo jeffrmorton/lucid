@@ -1,5 +1,8 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.4.9/schema.json",
+  "files": {
+    "includes": ["web/src/**/*.ts", "web/src/**/*.tsx"]
+  },
   "assist": {
     "actions": {
       "source": { "organizeImports": "on" }
@@ -7,7 +10,16 @@
   },
   "linter": {
     "enabled": true,
-    "rules": { "recommended": true }
+    "rules": {
+      "recommended": true,
+      "correctness": {
+        "noUnusedImports": "error",
+        "noUnusedVariables": "error"
+      },
+      "style": {
+        "noNonNullAssertion": "warn"
+      }
+    }
   },
   "formatter": {
     "enabled": true,
@@ -16,7 +28,11 @@
     "lineWidth": 100
   },
   "javascript": {
-    "formatter": { "quoteStyle": "single", "semicolons": "always" }
+    "formatter": {
+      "quoteStyle": "single",
+      "trailingCommas": "all",
+      "semicolons": "always"
+    }
   },
   "css": {
     "parser": { "tailwindDirectives": true }

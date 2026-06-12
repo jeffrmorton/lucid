@@ -3,14 +3,35 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
+    # Bind to loopback only: the server is a no-auth local-first design and must
+    # not be exposed to the LAN. Use a reverse proxy + auth for remote access.
     ports:
-      - "${LUCID_PORT:-3002}:3001"
+      - "127.0.0.1:${LUCID_PORT:-3002}:3001"
     environment:
       - LUCID_HOST=0.0.0.0
       - LUCID_PORT=3001
-      - LUCID_LOG_LEVEL=info
+      # EarthSync SR-entrainment source. Point this at a reachable EarthSync
+      # instance. For a bare EarthSync run it listens on :8000; under EarthSync's
+      # own compose the server is on :3000 (host :3001). To wire the two projects
+      # on one host, attach EarthSync to the `lucid-network` below (or run them on
+      # a shared external network) and set e.g.:
+      #   LUCID_EARTHSYNC_URL=http://earthsync-server:3000
+      - LUCID_EARTHSYNC_URL=${LUCID_EARTHSYNC_URL:-http://host.docker.internal:8000}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./protocols:/app/protocols:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
     restart: unless-stopped
 
   web:
@@ -20,7 +41,19 @@ services:
     ports:
       - "${LUCID_WEB_PORT:-4000}:80"
     depends_on:
-      - server
+      server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:80/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
     restart: unless-stopped
 
   simulator:
@@ -35,5 +68,30 @@ services:
       - EPOCH_INTERVAL=1.0
       - LOG_LEVEL=info
     depends_on:
-      - server
+      server:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
     restart: unless-stopped
+
+  # --- EarthSync (SR data source) ---
+  # Lucid's SR-entrainment protocol polls a live EarthSync instance for the
+  # Schumann Resonance fundamental. EarthSync lives in its own repository with
+  # its own compose (redis + timescaledb + server + web). To use live SR data,
+  # bring EarthSync up there and set LUCID_EARTHSYNC_URL to its reachable
+  # address. If you want both on one Docker network, create an external network
+  # and attach EarthSync's server to it, then uncomment:
+  #
+  # earthsync-server:
+  #   image: earthsync-server:latest   # built from the earthsync repo
+  #   networks: [lucid-network]
+  #
+  # and set LUCID_EARTHSYNC_URL=http://earthsync-server:3000 on `server`.
+
+networks:
+  default:
+    name: lucid-network
+    driver: bridge

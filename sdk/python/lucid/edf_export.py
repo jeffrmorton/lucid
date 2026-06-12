@@ -14,7 +14,7 @@ from __future__ import annotations
 import datetime
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, BinaryIO
 
 import numpy as np
 
@@ -57,7 +57,7 @@ class _EDFWriteParams:
     channel_names: list[str]
 
 
-def _write_main_header(f: object, config: EDFConfig, params: _EDFWriteParams) -> None:
+def _write_main_header(f: BinaryIO, config: EDFConfig, params: _EDFWriteParams) -> None:
     """Write the 256-byte EDF main header."""
     f.write(_pad("0", 8))  # Version
     f.write(_pad(config.patient_id, 80))
@@ -71,7 +71,7 @@ def _write_main_header(f: object, config: EDFConfig, params: _EDFWriteParams) ->
     f.write(_pad(str(params.n_channels), 4))
 
 
-def _write_channel_headers(f: object, config: EDFConfig, params: _EDFWriteParams) -> None:
+def _write_channel_headers(f: BinaryIO, config: EDFConfig, params: _EDFWriteParams) -> None:
     """Write channel header fields (n_channels x 256 bytes total)."""
     nc = params.n_channels
     for name in params.channel_names:
@@ -97,7 +97,7 @@ def _write_channel_headers(f: object, config: EDFConfig, params: _EDFWriteParams
 
 
 def _write_data_records(
-    f: object, data: NDArray[np.float64], config: EDFConfig, params: _EDFWriteParams
+    f: BinaryIO, data: NDArray[np.float64], config: EDFConfig, params: _EDFWriteParams
 ) -> None:
     """Write EDF data records."""
     for rec in range(params.n_records):
@@ -215,6 +215,15 @@ def read_edf_header(filepath: Path | str) -> dict:
 
         channel_names = [f.read(16).decode("ascii").strip() for _ in range(n_channels)]
 
+        # The remaining per-channel header sub-blocks precede samples_per_record.
+        # Each is written for ALL channels consecutively (EDF spec):
+        #   transducer 80, phys_dim 8, phys_min 8, phys_max 8,
+        #   dig_min 8, dig_max 8, prefilter 80  -> 200 bytes per channel.
+        f.seek(200 * n_channels, 1)
+        samples_per_record = int(f.read(8).decode("ascii").strip())
+
+    sample_rate = samples_per_record / record_duration if record_duration else 0.0
+
     return {
         "version": version,
         "patient_id": patient_id,
@@ -227,4 +236,6 @@ def read_edf_header(filepath: Path | str) -> dict:
         "record_duration": record_duration,
         "n_channels": n_channels,
         "channel_names": channel_names,
+        "samples_per_record": samples_per_record,
+        "sample_rate": sample_rate,
     }

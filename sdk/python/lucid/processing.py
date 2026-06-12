@@ -25,7 +25,7 @@ def bandpass_filter(
         Filtered data, same shape as input.
     """
     sos = butter(order, [low_hz, high_hz], btype="band", fs=sample_rate, output="sos")
-    return sosfilt(sos, data, axis=-1)
+    return np.asarray(sosfilt(sos, data, axis=-1), dtype=np.float64)
 
 
 def notch_filter(

@@ -27,10 +27,7 @@ async def test_get_band_definitions(client: AsyncClient) -> None:
     assert bands["alpha"]["high"] == 13.0
 
 
-async def test_get_protocols(client: AsyncClient) -> None:
+async def test_protocols_endpoint_removed(client: AsyncClient) -> None:
+    """The stale /api/data/protocols handler is gone; use /api/protocols/ instead."""
     response = await client.get("/api/data/protocols")
-    assert response.status_code == 200
-    protocols = response.json()["protocols"]
-    assert len(protocols) == 3
-    names = [p["name"] for p in protocols]
-    assert "SMR Training" in names
+    assert response.status_code == 404

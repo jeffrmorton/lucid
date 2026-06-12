@@ -5,12 +5,15 @@ Enables Lucid to receive data from any LSL-compatible EEG device.
 
 from __future__ import annotations
 
+from typing import Any
+
+pylsl: Any
 try:
-    import pylsl  # pragma: no cover
+    import pylsl  # type: ignore[no-redef]  # pragma: no cover
 
     _PYLSL_AVAILABLE = True  # pragma: no cover
 except ImportError:
-    pylsl = None  # type: ignore[assignment]
+    pylsl = None
     _PYLSL_AVAILABLE = False
 
 

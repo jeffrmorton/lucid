@@ -16,12 +16,13 @@ import numpy as np
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
+pylsl: Any
 try:
-    import pylsl  # pragma: no cover
+    import pylsl  # type: ignore[no-redef]  # pragma: no cover
 
     _PYLSL_AVAILABLE = True  # pragma: no cover
 except ImportError:
-    pylsl = None  # type: ignore[assignment]
+    pylsl = None
     _PYLSL_AVAILABLE = False
 
 

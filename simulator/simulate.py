@@ -24,7 +24,6 @@ import logging
 import os
 import struct
 import sys
-import time
 
 import numpy as np
 
@@ -76,7 +75,11 @@ async def run() -> None:
             async with websockets.connect(SERVER_URL) as ws:
                 log.info(
                     "Connected. Streaming %dch × %d SPS, α=%.1f Hz @ %.1f, interval=%.1fs",
-                    N_CHANNELS, SAMPLE_RATE, ALPHA_HZ, ALPHA_AMP, EPOCH_INTERVAL,
+                    N_CHANNELS,
+                    SAMPLE_RATE,
+                    ALPHA_HZ,
+                    ALPHA_AMP,
+                    EPOCH_INTERVAL,
                 )
 
                 while True:

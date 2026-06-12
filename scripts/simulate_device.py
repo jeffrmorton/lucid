@@ -14,8 +14,6 @@ import argparse
 import asyncio
 import json
 import struct
-import sys
-import time
 
 import numpy as np
 import websockets
@@ -37,9 +35,6 @@ def generate_epoch(
     Returns shape (n_channels, n_samples).
     """
     t = np.arange(n_samples) / sample_rate
-
-    # Alpha oscillation (10 Hz) — dominant rhythm in relaxed, eyes-closed EEG
-    alpha = alpha_amp * np.sin(2 * np.pi * alpha_hz * t)
 
     # Theta component (6 Hz, weaker)
     theta = (alpha_amp * 0.3) * np.sin(2 * np.pi * 6.0 * t)
@@ -143,7 +138,7 @@ async def run_neurofeedback_simulation(
             cal_epochs = cal_duration  # 1 epoch per second at sample_rate samples
             print(f"Calibration: sending {cal_epochs} epochs...")
 
-            for i in range(cal_epochs):
+            for _ in range(cal_epochs):
                 data = generate_epoch(n_channels=n_channels, n_samples=sample_rate, alpha_amp=10.0)
                 await ws.send(epoch_to_bytes(data))
 
@@ -182,7 +177,7 @@ def main() -> None:
     parser.add_argument("--rate", type=int, default=250, help="Sample rate (SPS)")
     parser.add_argument("--alpha-hz", type=float, default=10.0, help="Alpha oscillation frequency")
     parser.add_argument("--alpha-amp", type=float, default=15.0, help="Alpha amplitude")
-    parser.add_argument("--mode", choices=["eeg", "nfb"], default="eeg", help="Mode: eeg or neurofeedback")
+    parser.add_argument("--mode", choices=["eeg", "nfb"], default="eeg", help="eeg or nfb")
     parser.add_argument("--protocol", default="smr_training", help="Neurofeedback protocol name")
     parser.add_argument("-q", "--quiet", action="store_true", help="Less output")
 

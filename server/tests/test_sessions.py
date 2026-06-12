@@ -44,8 +44,8 @@ async def test_get_session(client: AsyncClient) -> None:
 
 async def test_get_session_not_found(client: AsyncClient) -> None:
     response = await client.get("/api/sessions/nonexistent")
-    assert response.status_code == 200
-    assert "error" in response.json()
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Session not found"
 
 
 async def test_delete_session(client: AsyncClient) -> None:
@@ -58,5 +58,5 @@ async def test_delete_session(client: AsyncClient) -> None:
 
 async def test_delete_session_not_found(client: AsyncClient) -> None:
     response = await client.delete("/api/sessions/nonexistent")
-    assert response.status_code == 200
-    assert "error" in response.json()
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Session not found"

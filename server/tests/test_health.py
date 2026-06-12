@@ -20,5 +20,7 @@ async def test_health_check(client: AsyncClient) -> None:
 
 
 async def test_health_returns_version(client: AsyncClient) -> None:
+    import lucid_server
+
     response = await client.get("/health")
-    assert response.json()["version"] == "0.2.0"
+    assert response.json()["version"] == lucid_server.__version__

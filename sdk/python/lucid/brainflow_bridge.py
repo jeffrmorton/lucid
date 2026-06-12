@@ -14,14 +14,21 @@ import numpy as np
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
+BoardIds: Any
+BoardShim: Any
+BrainFlowInputParams: Any
 try:
-    from brainflow.board_shim import BoardIds, BoardShim, BrainFlowInputParams  # pragma: no cover
+    from brainflow.board_shim import (  # type: ignore[no-redef]
+        BoardIds,
+        BoardShim,
+        BrainFlowInputParams,
+    )  # pragma: no cover
 
     BRAINFLOW_AVAILABLE = True  # pragma: no cover
 except ImportError:
-    BoardIds = None  # type: ignore[assignment,misc]
-    BoardShim = None  # type: ignore[assignment,misc]
-    BrainFlowInputParams = None  # type: ignore[assignment,misc]
+    BoardIds = None
+    BoardShim = None
+    BrainFlowInputParams = None
     BRAINFLOW_AVAILABLE = False
 
 
@@ -93,11 +100,17 @@ class BrainFlowBridge:
     def read(self, n_samples: int = 250) -> NDArray[np.float64]:
         """Read EEG samples from the board.
 
+        Always returns shape (n_channels, n_samples). If the board exposes
+        fewer EEG channels than ``n_channels`` (e.g. Muse 2 = 4 ch with the
+        default n_channels=8), the missing rows are zero-padded so downstream
+        code that assumes n_channels rows never misaligns. Returns zeros if not
+        streaming.
+
         Args:
             n_samples: Number of samples to read.
 
         Returns:
-            Array of shape (n_channels, n_samples). Returns zeros if not streaming.
+            Array of shape (n_channels, n_samples).
         """
         if not self.streaming or self._board is None:
             return np.zeros((self.n_channels, n_samples))
@@ -110,7 +123,11 @@ class BrainFlowBridge:
         selected = eeg_channels[: self.n_channels]
         if len(selected) == 0 or data.shape[1] == 0:
             return np.zeros((self.n_channels, n_samples))
-        return data[selected, :n_samples].astype(np.float64)
+
+        out = np.zeros((self.n_channels, n_samples), dtype=np.float64)
+        rows = data[selected, :n_samples].astype(np.float64)
+        out[: rows.shape[0], : rows.shape[1]] = rows
+        return out
 
     @property
     def is_streaming(self) -> bool:

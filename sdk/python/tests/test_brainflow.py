@@ -146,3 +146,29 @@ def test_read_with_mocked_board() -> None:
         data = bridge.read(100)
         assert data.shape == (8, 100)
         assert data.dtype == np.float64
+
+
+@patch("lucid.brainflow_bridge.BRAINFLOW_AVAILABLE", True)
+def test_read_pads_when_board_has_fewer_channels() -> None:
+    """A 4-channel board with n_channels=8 returns a zero-padded (8, N) array."""
+    mock_board = MagicMock()
+    # Board exposes only 4 EEG channels.
+    mock_board.get_board_data.return_value = np.ones((4, 100))
+    mock_board_class = MagicMock(return_value=mock_board)
+    mock_params_class = MagicMock()
+
+    with (
+        patch("lucid.brainflow_bridge.BoardShim", mock_board_class) as mock_shim_cls,
+        patch("lucid.brainflow_bridge.BrainFlowInputParams", mock_params_class),
+        patch("lucid.brainflow_bridge.BoardIds") as mock_ids,
+    ):
+        mock_ids.SYNTHETIC_BOARD.value = -1
+        mock_shim_cls.get_eeg_channels.return_value = [0, 1, 2, 3]
+
+        bridge = BrainFlowBridge(n_channels=8)
+        bridge.start()
+        data = bridge.read(100)
+        assert data.shape == (8, 100)
+        # First 4 rows are the real data, last 4 are zero padding.
+        np.testing.assert_array_equal(data[:4], np.ones((4, 100)))
+        np.testing.assert_array_equal(data[4:], np.zeros((4, 100)))

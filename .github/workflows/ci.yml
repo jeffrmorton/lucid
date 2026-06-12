@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   lint:
@@ -24,14 +25,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: cd server && uv sync --dev && uv run pytest --cov --cov-fail-under=100
+      - run: cd server && uv sync --dev && uv run pytest --cov=lucid_server --cov-fail-under=100
 
   test-sdk:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: cd sdk/python && uv sync --dev && uv run pytest --cov --cov-fail-under=100
+      - run: cd sdk/python && uv sync --dev && uv run pytest --cov=lucid --cov-fail-under=100
 
   test-web:
     runs-on: ubuntu-latest
@@ -40,14 +41,27 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: cd web && corepack enable && pnpm install && pnpm test
+      - run: cd web && corepack enable && pnpm install && pnpm test:coverage
 
   typecheck-python:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: cd server && uv sync --dev && uv run pyright .
+      # Run pyright from the repo root so the root pyrightconfig.json
+      # (which includes both server and sdk/python) applies to both members.
+      - run: |
+          uv sync --all-packages --dev
+          uv run pyright
+
+  typecheck-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: cd web && corepack enable && pnpm install && pnpm typecheck
 
   security:
     runs-on: ubuntu-latest
@@ -65,7 +79,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    needs: [lint, test-server, test-sdk, test-web, typecheck-python, security, dead-code]
+    needs: [lint, test-server, test-sdk, test-web, typecheck-python, typecheck-web, security, dead-code]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
