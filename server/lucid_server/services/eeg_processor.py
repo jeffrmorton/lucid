@@ -9,6 +9,19 @@ from numpy.typing import NDArray
 from scipy.signal import butter, iirnotch, sosfilt, sosfilt_zi, tf2sos, welch
 
 
+def _bin_width(freqs: NDArray[np.float64]) -> float:
+    """Return the PSD frequency bin width (df) used to integrate power.
+
+    Band power is the integral of the PSD over frequency, approximated as the
+    bin sum times df. A PSD with fewer than two bins has no defined spacing, so
+    df is 0.0 (every band power is then 0.0, which is the correct degenerate
+    result for a PSD that carries no spectral resolution).
+    """
+    if freqs.shape[0] < 2:
+        return 0.0
+    return float(freqs[1] - freqs[0])
+
+
 class ArtifactRejector:
     """Simplified Artifact Subspace Reconstruction.
 
@@ -125,6 +138,12 @@ class EEGProcessor:
         Returns:
             Dict with keys 'delta', 'theta', 'alpha', 'beta', 'gamma'.
             Each value is shape (n_channels,).
+
+        The mask is half-open ``[low, high)`` so a bin sitting exactly on a shared
+        band edge (e.g. 8 Hz between theta 4-8 and alpha 8-13) is counted in
+        exactly one band, never both. Power is the integral of the PSD over
+        frequency: the bin sum scaled by the bin width df, giving true power in
+        the PSD's units rather than a bare bin sum.
         """
         bands = {
             "delta": (0.5, 4.0),
@@ -133,10 +152,11 @@ class EEGProcessor:
             "beta": (13.0, 30.0),
             "gamma": (30.0, 100.0),
         }
+        df = _bin_width(freqs)
         result = {}
         for name, (low, high) in bands.items():
-            mask = (freqs >= low) & (freqs <= high)
-            result[name] = np.sum(psd[:, mask], axis=1)
+            mask = (freqs >= low) & (freqs < high)
+            result[name] = np.sum(psd[:, mask], axis=1) * df
         return result
 
     def compute_custom_band_power(
@@ -152,9 +172,14 @@ class EEGProcessor:
 
         Returns:
             Band power per channel.
+
+        Uses the same half-open ``[low_hz, high_hz)`` mask and df scaling as
+        :meth:`compute_band_powers` so custom-band values (SMR / SR / etc.) stay
+        directly comparable to the standard-band values.
         """
-        mask = (freqs >= low_hz) & (freqs <= high_hz)
-        return np.sum(psd[:, mask], axis=1)
+        df = _bin_width(freqs)
+        mask = (freqs >= low_hz) & (freqs < high_hz)
+        return np.sum(psd[:, mask], axis=1) * df
 
     def reject_artifacts(self, data: NDArray[np.float64]) -> NDArray[np.float64]:
         """Apply artifact rejection. Auto-calibrates from first 5 epochs if not calibrated."""
