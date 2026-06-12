@@ -369,4 +369,108 @@ describe('useEEGStream', () => {
     });
     // Should not throw
   });
+
+  it('defaults channel alpha to an empty array when absent', () => {
+    let wsInstance: MockWebSocket | null = null;
+    vi.stubGlobal(
+      'WebSocket',
+      class extends MockWebSocket {
+        constructor(url: string) {
+          super(url);
+          wsInstance = this;
+        }
+      },
+    );
+    const { result } = renderHook(() => useEEGStream());
+    act(() => result.current.connect());
+    act(() => {
+      wsInstance?.onmessage?.({
+        data: JSON.stringify({
+          status: 'processed',
+          band_powers: { delta: [1], theta: [1], beta: [1], gamma: [1] },
+        }),
+      });
+    });
+    expect(result.current.latestData.channelAlpha).toEqual([]);
+    expect(result.current.latestData.bandPowers?.alpha).toBe(0);
+  });
+
+  it('builds a dB spectrogram row from freqs/psd trimmed at 55 Hz', () => {
+    let wsInstance: MockWebSocket | null = null;
+    vi.stubGlobal(
+      'WebSocket',
+      class extends MockWebSocket {
+        constructor(url: string) {
+          super(url);
+          wsInstance = this;
+        }
+      },
+    );
+    const { result } = renderHook(() => useEEGStream());
+    act(() => result.current.connect());
+    act(() => {
+      wsInstance?.onmessage?.({
+        data: JSON.stringify({
+          status: 'processed',
+          band_powers: { delta: [1], theta: [1], alpha: [1], beta: [1], gamma: [1] },
+          freqs: [0, 10, 50, 56, 60],
+          psd: [1, 10, 0, 5, 100],
+        }),
+      });
+    });
+    // Trimmed to f <= 55 (first 3 bins); 10*log10 with a -60 floor for non-positive.
+    expect(result.current.latestData.spectrogramRows[0]).toEqual([0, 10, -60]);
+  });
+
+  it('keeps the full psd when no frequency exceeds 55 Hz', () => {
+    let wsInstance: MockWebSocket | null = null;
+    vi.stubGlobal(
+      'WebSocket',
+      class extends MockWebSocket {
+        constructor(url: string) {
+          super(url);
+          wsInstance = this;
+        }
+      },
+    );
+    const { result } = renderHook(() => useEEGStream());
+    act(() => result.current.connect());
+    act(() => {
+      wsInstance?.onmessage?.({
+        data: JSON.stringify({
+          status: 'processed',
+          band_powers: { delta: [1], theta: [1], alpha: [1], beta: [1], gamma: [1] },
+          freqs: [0, 10, 20],
+          psd: [1, 10, 100],
+        }),
+      });
+    });
+    expect(result.current.latestData.spectrogramRows[0]).toEqual([0, 10, 20]);
+  });
+
+  it('caps the spectrogram history at 60 rows', () => {
+    let wsInstance: MockWebSocket | null = null;
+    vi.stubGlobal(
+      'WebSocket',
+      class extends MockWebSocket {
+        constructor(url: string) {
+          super(url);
+          wsInstance = this;
+        }
+      },
+    );
+    const { result } = renderHook(() => useEEGStream());
+    act(() => result.current.connect());
+    act(() => {
+      for (let i = 0; i < 61; i++) {
+        wsInstance?.onmessage?.({
+          data: JSON.stringify({
+            status: 'processed',
+            band_powers: { delta: [i], theta: [0], alpha: [0], beta: [0], gamma: [0] },
+          }),
+        });
+      }
+    });
+    expect(result.current.latestData.spectrogramRows).toHaveLength(60);
+  });
 });

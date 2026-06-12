@@ -1,7 +1,7 @@
 /** Hook for managing WebSocket EEG data stream. */
 
 import { useCallback, useRef, useState } from 'react';
-import { DEFAULT_CHANNELS, SERVER_WS_URL } from '../lib/constants';
+import { SERVER_WS_URL } from '../lib/constants';
 import type { BandPowers, ConnectionStatus } from '../lib/types';
 
 export interface EEGStreamData {

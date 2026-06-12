@@ -1,6 +1,12 @@
 /** Neurofeedback training panel with optional Schumann Resonance entrainment display. */
 
-import { useState, useRef, useCallback } from 'react';
+import clsx from 'clsx';
+import { Radio } from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
+import { Button } from './ui/Button';
+import { Panel } from './ui/Panel';
+import { Select } from './ui/Select';
+import { StatusChip } from './ui/StatusChip';
 
 export interface FeedbackState {
   reward: boolean;
@@ -19,13 +25,34 @@ export interface ProtocolOption {
   id: string;
   label: string;
   hasEarthSync: boolean;
+  description: string;
 }
 
 export const PROTOCOL_OPTIONS: ProtocolOption[] = [
-  { id: 'smr_training', label: 'SMR Training', hasEarthSync: false },
-  { id: 'alpha_theta', label: 'Alpha/Theta', hasEarthSync: false },
-  { id: 'beta_training', label: 'Beta Training', hasEarthSync: false },
-  { id: 'sr_entrainment', label: 'SR Entrainment', hasEarthSync: true },
+  {
+    id: 'smr_training',
+    label: 'SMR Training',
+    hasEarthSync: false,
+    description: 'Reinforce the 12–15 Hz sensorimotor rhythm while inhibiting theta and high beta.',
+  },
+  {
+    id: 'alpha_theta',
+    label: 'Alpha/Theta',
+    hasEarthSync: false,
+    description: 'Deep relaxation protocol rewarding the alpha/theta crossover.',
+  },
+  {
+    id: 'beta_training',
+    label: 'Beta Training',
+    hasEarthSync: false,
+    description: 'Boost focused 15–20 Hz beta activity for sustained attention.',
+  },
+  {
+    id: 'sr_entrainment',
+    label: 'SR Entrainment',
+    hasEarthSync: true,
+    description: 'Entrain to the live Schumann Resonance fundamental streamed from EarthSync.',
+  },
 ];
 
 interface NeurofeedbackPanelProps {
@@ -155,145 +182,191 @@ export function NeurofeedbackPanel({
     updateFeedback(undefined);
     setPhase(undefined);
   }, [onStopTraining, updateTraining, updateFeedback]);
+
+  const activeProtocol = PROTOCOL_OPTIONS.find((p) => p.id === selectedProtocol);
+
   return (
-    <div className="space-y-3" data-testid="neurofeedback-panel">
-      <div className="bg-bg-panel rounded-lg p-3">
-        <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-          Neurofeedback
-        </h3>
-
-        {/* Protocol selector */}
-        <div className="mb-3">
-          <label htmlFor="protocol-select" className="text-xs text-text-muted block mb-1">
-            Protocol
-          </label>
-          <select
-            id="protocol-select"
-            data-testid="protocol-select"
-            value={selectedProtocol}
-            onChange={(e) => onProtocolChange?.(e.target.value)}
-            disabled={isTraining}
-            className="w-full text-xs bg-bg-primary text-text-primary border border-border rounded px-2 py-1.5 focus:outline-none focus:border-accent disabled:opacity-50"
-          >
-            {PROTOCOL_OPTIONS.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label}
-                {p.hasEarthSync ? ' (EarthSync)' : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <p className="text-xs text-text-muted mb-2">Protocol: {protocolName}</p>
-        <div className="space-y-1 mb-3">
-          {feedback ? (
-            <>
-              <div
-                className={`text-xs font-mono px-2 py-1 rounded ${feedback.reward ? 'active bg-success/20 text-success' : 'bg-bg-primary text-text-muted'}`}
-                data-testid="reward-indicator"
-              >
-                Reward: {feedback.reward ? '\u2713' : '\u2014'} ({feedback.rewardValue.toFixed(2)})
-              </div>
-              <div
-                className={`text-xs font-mono px-2 py-1 rounded ${feedback.inhibit ? 'active bg-warning/20 text-warning' : 'bg-bg-primary text-text-muted'}`}
-                data-testid="inhibit-indicator"
-              >
-                Inhibit: {feedback.inhibit ? '\u26A0' : '\u2014'} (
-                {feedback.inhibitValue.toFixed(2)})
-              </div>
-            </>
-          ) : (
-            <p className="text-xs text-text-muted">No feedback data</p>
-          )}
-        </div>
-        {phase && (
-          <p className="text-xs text-text-muted mb-2" data-testid="training-phase">
-            Phase: {phase}
+    <div className="mx-auto w-full flex flex-col gap-4 max-w-2xl" data-testid="neurofeedback-panel">
+      {/* Protocol selector */}
+      <Panel title="Protocol">
+        <Select
+          value={selectedProtocol}
+          options={PROTOCOL_OPTIONS.map((p) => ({
+            value: p.id,
+            label: p.hasEarthSync ? `${p.label} (EarthSync)` : p.label,
+          }))}
+          onChange={(v) => onProtocolChange?.(v)}
+          disabled={isTraining}
+          label="Neurofeedback protocol"
+          id="protocol-select"
+        />
+        {activeProtocol && (
+          <p className="mt-2 text-xs text-text-secondary" data-testid="protocol-description">
+            {activeProtocol.description}
           </p>
         )}
-        <div>
-          {isTraining ? (
-            <button
-              type="button"
-              onClick={handleStopTraining}
-              data-testid="stop-training"
-              className="text-xs px-3 py-1.5 rounded bg-error/20 text-error hover:bg-error/30 transition-colors"
-            >
-              Stop Training
-            </button>
+      </Panel>
+
+      {/* Training */}
+      <Panel title="Training" meta={`Protocol: ${protocolName}`}>
+        <div className="mb-3 flex items-center gap-2">
+          {phase ? (
+            <StatusChip
+              variant={phase === 'training' ? 'success' : 'warning'}
+              label={phase === 'training' ? 'Training' : 'Calibration'}
+              pulse
+              className="capitalize"
+            />
           ) : (
-            <button
-              type="button"
-              onClick={handleStartTraining}
-              data-testid="start-training"
-              className="text-xs px-3 py-1.5 rounded bg-accent/20 text-accent hover:bg-accent/30 transition-colors"
-            >
-              Start Training
-            </button>
+            <StatusChip variant="neutral" label="Idle" />
+          )}
+          {phase && (
+            <span className="sr-only" data-testid="training-phase">
+              Phase: {phase}
+            </span>
           )}
         </div>
-      </div>
 
-      {/* Schumann Resonance status card */}
+        {feedback ? (
+          <div className="grid grid-cols-2 gap-3">
+            <FeedbackReadout
+              testId="reward-indicator"
+              label="Reward"
+              value={feedback.rewardValue}
+              active={feedback.reward}
+              tone="success"
+            />
+            <FeedbackReadout
+              testId="inhibit-indicator"
+              label="Inhibit"
+              value={feedback.inhibitValue}
+              active={feedback.inhibit}
+              tone="warning"
+            />
+          </div>
+        ) : (
+          <p className="text-sm text-text-muted">No feedback data yet.</p>
+        )}
+
+        <div className="mt-4">
+          {isTraining ? (
+            <Button variant="danger" onClick={handleStopTraining} data-testid="stop-training">
+              Stop Training
+            </Button>
+          ) : (
+            <Button variant="primary" onClick={handleStartTraining} data-testid="start-training">
+              Start Training
+            </Button>
+          )}
+        </div>
+      </Panel>
+
+      {/* Schumann Resonance entrainment centerpiece */}
       {srData && (
-        <div
-          className="bg-bg-panel rounded-lg p-3 border border-border"
-          data-testid="sr-status-card"
-        >
-          <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-            Schumann Resonance
-          </h3>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
+        <Panel title="SR Entrainment" className="border-border-strong" testId="sr-status-card">
+          <div className="flex items-center justify-between">
+            <StatusChip variant="success" label="EarthSync Live" pulse />
+            <span
+              className="font-mono text-[11px] text-text-muted tabular-nums"
+              data-testid="sr-status-dot"
+            >
+              {srData.stationId}
+            </span>
+          </div>
+          <div
+            className="mt-3 font-mono tabular-nums text-4xl text-accent-bright"
+            data-testid="sr-frequency"
+          >
+            {srData.frequency.toFixed(3)}
+            <span className="ml-1 text-base text-text-muted">Hz</span>
+          </div>
+          <div className="mt-1 text-xs text-text-secondary" data-testid="sr-target-band">
+            Reward band: {(srData.frequency - 1).toFixed(2)} – {(srData.frequency + 1).toFixed(2)}{' '}
+            Hz
+          </div>
+
+          <div className="mt-4">
+            <div className="flex justify-between text-[10px] text-text-muted mb-1">
+              <span>4 Hz</span>
+              <span>Theta · Alpha</span>
+              <span>13 Hz</span>
+            </div>
+            <div className="relative h-2.5 bg-bg-raised rounded-full overflow-hidden">
               <div
-                className="w-2 h-2 rounded-full bg-success"
-                data-testid="sr-status-dot"
+                className="absolute inset-y-0 left-0 bg-band-theta/30"
+                style={{ width: `${((8 - 4) / (13 - 4)) * 100}%` }}
               />
-              <span className="text-sm text-text-secondary">EarthSync</span>
-              <span className="text-xs text-text-muted">{srData.stationId}</span>
-            </div>
-            <div className="text-2xl font-mono text-accent" data-testid="sr-frequency">
-              {srData.frequency.toFixed(3)} Hz
-            </div>
-            <div className="text-xs text-text-muted" data-testid="sr-target-band">
-              Target: {(srData.frequency - 1).toFixed(2)} &ndash;{' '}
-              {(srData.frequency + 1).toFixed(2)} Hz
-            </div>
-            {/* Visual frequency indicator — positions SR within theta/alpha range */}
-            <div className="mt-2">
-              <div className="flex justify-between text-[10px] text-text-muted mb-0.5">
-                <span>4 Hz</span>
-                <span>Theta | Alpha</span>
-                <span>13 Hz</span>
-              </div>
-              <div className="relative h-2 bg-bg-primary rounded-full overflow-hidden">
-                {/* Theta region (4-8 Hz) */}
-                <div
-                  className="absolute inset-y-0 left-0 bg-band-theta/30"
-                  style={{ width: `${((8 - 4) / (13 - 4)) * 100}%` }}
-                />
-                {/* Alpha region (8-13 Hz) */}
-                <div
-                  className="absolute inset-y-0 bg-band-alpha/30"
-                  style={{
-                    left: `${((8 - 4) / (13 - 4)) * 100}%`,
-                    width: `${((13 - 8) / (13 - 4)) * 100}%`,
-                  }}
-                />
-                {/* SR fundamental marker */}
-                <div
-                  className="absolute top-0 h-full w-1 bg-accent rounded-full"
-                  data-testid="sr-marker"
-                  style={{
-                    left: `${Math.min(Math.max(((srData.frequency - 4) / (13 - 4)) * 100, 0), 100)}%`,
-                    transform: 'translateX(-50%)',
-                  }}
-                />
-              </div>
+              <div
+                className="absolute inset-y-0 bg-band-alpha/30"
+                style={{
+                  left: `${((8 - 4) / (13 - 4)) * 100}%`,
+                  width: `${((13 - 8) / (13 - 4)) * 100}%`,
+                }}
+              />
+              <div
+                className="absolute top-0 h-full w-1 bg-accent-bright rounded-full"
+                data-testid="sr-marker"
+                style={{
+                  left: `${Math.min(Math.max(((srData.frequency - 4) / (13 - 4)) * 100, 0), 100)}%`,
+                  transform: 'translateX(-50%)',
+                }}
+              />
             </div>
           </div>
-        </div>
+        </Panel>
       )}
+    </div>
+  );
+}
+
+interface FeedbackReadoutProps {
+  testId: string;
+  label: string;
+  value: number;
+  active: boolean;
+  tone: 'success' | 'warning';
+}
+
+const TONE = {
+  success: { text: 'text-success', bar: 'bg-success', activeRing: 'bg-success/10 ring-success/40' },
+  warning: { text: 'text-warning', bar: 'bg-warning', activeRing: 'bg-warning/10 ring-warning/40' },
+} as const;
+
+function FeedbackReadout({ testId, label, value, active, tone }: FeedbackReadoutProps) {
+  const pct = Math.min(100, Math.max(0, value * 100));
+  const t = TONE[tone];
+  return (
+    <div
+      data-testid={testId}
+      data-active={active}
+      className={clsx(
+        'rounded-md p-3 ring-1 ring-inset transition-colors',
+        active ? t.activeRing : 'bg-bg-raised ring-border',
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+          {label}
+        </span>
+        <Radio
+          className={clsx('w-3.5 h-3.5', active ? t.text : 'text-text-muted')}
+          aria-hidden={true}
+        />
+      </div>
+      <div
+        className={clsx(
+          'mt-1 font-mono tabular-nums text-2xl',
+          active ? t.text : 'text-text-primary',
+        )}
+      >
+        {value.toFixed(2)}
+      </div>
+      <div className="mt-2 h-1.5 bg-bg-panel rounded-full overflow-hidden">
+        <div
+          className={clsx('h-full rounded-full transition-all', t.bar)}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
     </div>
   );
 }

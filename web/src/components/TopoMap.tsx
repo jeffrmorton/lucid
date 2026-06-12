@@ -1,12 +1,18 @@
-/** Topographic scalp map -- 2D interpolated view of EEG power distribution.
+/** Topographic scalp map — 2D interpolated view of EEG power distribution.
  *
- * Uses Canvas 2D with bilinear interpolation between electrode positions.
- * Electrode positions follow the 10-20 system.
+ * Inverse-distance-weighted interpolation between 10-20 electrode positions,
+ * rendered with the shared viridis colormap and a min/max value legend. The
+ * canvas fills its panel (square head centered, legend strip below), DPR-scaled
+ * and resize-aware via useCanvas.
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback } from 'react';
+import { useCanvas } from '../lib/canvas';
+import { viridisCss } from '../lib/colormap';
+import { canvasColors, themeFontMono } from '../lib/theme-colors';
+import { Panel } from './ui/Panel';
 
-// 10-20 electrode positions normalized to [0, 1] (from top-down view of head)
+// 10-20 electrode positions normalized to [0, 1] (top-down view of head).
 const ELECTRODE_POSITIONS: Record<string, [number, number]> = {
   Fz: [0.5, 0.28],
   C3: [0.3, 0.5],
@@ -18,10 +24,12 @@ const ELECTRODE_POSITIONS: Record<string, [number, number]> = {
   PO8: [0.75, 0.8],
 };
 
+const DEFAULT_CHANNEL_NAMES = ['Fz', 'C3', 'Cz', 'C4', 'Pz', 'PO7', 'Oz', 'PO8'];
+const LEGEND_H = 26;
+
 interface TopoMapProps {
   channelValues?: number[];
   channelNames?: string[];
-  size?: number;
 }
 
 /** Interpolate a value at (x, y) from sparse electrode data using inverse distance weighting. */
@@ -30,7 +38,7 @@ export function interpolateValue(
   y: number,
   positions: [number, number][],
   values: number[],
-  power: number = 2,
+  power = 2,
 ): number {
   let weightSum = 0;
   let valueSum = 0;
@@ -46,132 +54,125 @@ export function interpolateValue(
   return weightSum > 0 ? valueSum / weightSum : 0;
 }
 
-/** Map a value to a color (blue -> green -> yellow -> red). */
-export function valueToColor(value: number, min: number, max: number): string {
-  const range = max - min || 1;
-  const t = Math.max(0, Math.min(1, (value - min) / range));
-
-  // Blue -> Cyan -> Green -> Yellow -> Red
-  let r: number;
-  let g: number;
-  let b: number;
-  if (t < 0.25) {
-    r = 0;
-    g = Math.round(t * 4 * 255);
-    b = 255;
-  } else if (t < 0.5) {
-    r = 0;
-    g = 255;
-    b = Math.round((1 - (t - 0.25) * 4) * 255);
-  } else if (t < 0.75) {
-    r = Math.round((t - 0.5) * 4 * 255);
-    g = 255;
-    b = 0;
-  } else {
-    r = 255;
-    g = Math.round((1 - (t - 0.75) * 4) * 255);
-    b = 0;
-  }
-  return `rgb(${r},${g},${b})`;
-}
-
-/** Draw the topographic map on a canvas. */
+/** Draw the topographic map filling a (width × height) canvas in CSS pixels. */
 export function drawTopoMap(
   ctx: CanvasRenderingContext2D,
-  size: number,
+  width: number,
+  height: number,
   channelNames: string[],
   values: number[],
+  isEmpty: boolean,
 ): void {
+  ctx.clearRect(0, 0, width, height);
+
   const positions = channelNames.map((name) => ELECTRODE_POSITIONS[name] ?? [0.5, 0.5]);
   const min = Math.min(...values);
   const max = Math.max(...values);
 
-  // Draw interpolated heatmap inside head circle
-  const cx = size / 2;
-  const cy = size / 2;
-  const radius = size * 0.42;
-  const step = 4; // pixel step for performance
+  const area = Math.max(20, Math.min(width, height - LEGEND_H));
+  const hx0 = (width - area) / 2;
+  const hy0 = 2;
+  const cx = hx0 + area / 2;
+  const cy = hy0 + area / 2;
+  const radius = area * 0.42;
 
-  for (let py = 0; py < size; py += step) {
-    for (let px = 0; px < size; px += step) {
-      const dx = px - cx;
-      const dy = py - cy;
-      if (dx * dx + dy * dy > radius * radius) continue;
-
-      const nx = px / size;
-      const ny = py / size;
-      const val = interpolateValue(nx, ny, positions, values);
-      ctx.fillStyle = valueToColor(val, min, max);
-      ctx.fillRect(px, py, step, step);
+  if (!isEmpty) {
+    const step = 3;
+    for (let py = hy0; py < hy0 + area; py += step) {
+      for (let px = hx0; px < hx0 + area; px += step) {
+        const dx = px - cx;
+        const dy = py - cy;
+        if (dx * dx + dy * dy > radius * radius) continue;
+        const nx = (px - hx0) / area;
+        const ny = (py - hy0) / area;
+        ctx.fillStyle = viridisCss(interpolateValue(nx, ny, positions, values), min, max);
+        ctx.fillRect(px, py, step, step);
+      }
     }
   }
 
-  // Draw head outline
-  ctx.strokeStyle = '#888';
+  // Head outline.
+  ctx.strokeStyle = canvasColors.border();
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.arc(cx, cy, radius, 0, Math.PI * 2);
   ctx.stroke();
 
-  // Draw nose indicator
+  // Nose indicator.
   ctx.beginPath();
   ctx.moveTo(cx - 8, cy - radius);
-  ctx.lineTo(cx, cy - radius - 12);
+  ctx.lineTo(cx, cy - radius - 10);
   ctx.lineTo(cx + 8, cy - radius);
   ctx.stroke();
 
-  // Draw electrode positions
+  if (isEmpty) {
+    ctx.fillStyle = canvasColors.textMuted();
+    ctx.font = themeFontMono(12);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('No data', cx, cy);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    return;
+  }
+
+  // Electrodes.
+  ctx.font = themeFontMono(10);
   for (let i = 0; i < channelNames.length; i++) {
-    const [nx, ny] = positions[i];
-    const ex = nx * size;
-    const ey = ny * size;
-    ctx.fillStyle = '#fff';
+    const ex = hx0 + positions[i][0] * area;
+    const ey = hy0 + positions[i][1] * area;
+    ctx.fillStyle = canvasColors.textPrimary();
     ctx.beginPath();
     ctx.arc(ex, ey, 3, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#ccc';
-    ctx.font = '10px monospace';
+    ctx.fillStyle = canvasColors.textSecondary();
     ctx.fillText(channelNames[i], ex + 5, ey - 5);
   }
+
+  // Colorbar legend with min/max labels.
+  const barY = height - LEGEND_H + 6;
+  const barX = hx0;
+  const barW = area;
+  const barH = 6;
+  const segs = 40;
+  for (let i = 0; i < segs; i++) {
+    ctx.fillStyle = viridisCss(i / (segs - 1), 0, 1);
+    ctx.fillRect(barX + (i * barW) / segs, barY, barW / segs + 1, barH);
+  }
+  ctx.fillStyle = canvasColors.textMuted();
+  ctx.font = themeFontMono(9);
+  ctx.textBaseline = 'top';
+  ctx.fillText(min.toFixed(1), barX, barY + barH + 2);
+  ctx.textAlign = 'right';
+  ctx.fillText(`${max.toFixed(1)} µV²`, barX + barW, barY + barH + 2);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
 }
 
 export function TopoMap({
   channelValues = [],
-  channelNames = ['Fz', 'C3', 'Cz', 'C4', 'Pz', 'PO7', 'Oz', 'PO8'],
-  size = 200,
+  channelNames = DEFAULT_CHANNEL_NAMES,
 }: TopoMapProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isEmpty = channelValues.length === 0;
+  const values = isEmpty ? channelNames.map(() => 0) : channelValues;
 
-  const render = useCallback(() => {
-    const canvas = canvasRef.current;
-    /* v8 ignore next */
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    /* v8 ignore next */
-    if (!ctx) return;
-
-    const values = channelValues.length > 0 ? channelValues : channelNames.map(() => 0);
-
-    ctx.clearRect(0, 0, size, size);
-    drawTopoMap(ctx, size, channelNames, values);
-  }, [channelValues, channelNames, size]);
-
-  useEffect(() => {
-    render();
-  }, [render]);
+  const draw = useCallback(
+    (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+      drawTopoMap(ctx, width, height, channelNames, values, isEmpty);
+    },
+    [channelNames, values, isEmpty],
+  );
+  const canvasRef = useCanvas(draw);
 
   return (
-    <div className="bg-bg-panel rounded-lg p-3 flex flex-col items-center" data-testid="topo-map">
-      <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-        Topography
-      </h3>
+    <Panel title="Topography" noPadding className="h-full" testId="topo-map">
       <canvas
         ref={canvasRef}
-        width={size}
-        height={size}
         data-testid="topo-canvas"
-        style={{ width: size, height: size }}
+        role="img"
+        aria-label={`Topographic scalp map of alpha power across ${channelNames.length} electrodes (${channelNames.join(', ')})`}
+        className="block w-full h-full"
       />
-    </div>
+    </Panel>
   );
 }
